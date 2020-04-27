@@ -138,7 +138,8 @@ def Dossier_DICOM_vers_ImagesPNG(DossierDICOM, #Entrer ici la localisation du do
         SAVING = os.path.basename(rootdir)+r"_{}_{}.png".format(randomnumber, j) 
         im.save(os.path.join(Dossier_de_sauvegarde, SAVING))    
         j+=1
-            
+    
+    volume_numpy     = np.asarray(volume_numpy, dtype=np.float16)
     return volume_numpy
 
 
@@ -424,178 +425,182 @@ def U_Net(input_size = (256,256,1), #Correspond à la taille des images utilisé
     return model
 
 
-def myCNN (INPUT, 
-           sortie=10, #Le nombre de catégories prévues
-           original = 64 #Le nombre de features maps utilisé au départ
-          ):
+
+def Create_block(model,
+                 feature_maps = 32,
+                 Kernel_size = 5,
+                 activation = "relu",
+                 dropout_rate = .5,
+                 batch_Norm = True
+                ):
+    """
+    Ajoute un bloc CNN, inutile seule : A utiliser dans la fonction buildCNN
+
+    Parameters
+    ----------
+        - model : le model auquel ajouté un bloc, en mode séquentiel
+        - feature_maps : int, nombre de feature map à utiliser au départ (allourdit le réseau)
+        - Kernel_size : int, taille d'un côté du kernl size des couches convolutives. nous conseillons 3, 5 ou 7.
+        - activation : fonction d'activation parmi ['sigmoid', 'relu', 'elu', 'leaky-relu', 'selu', 'gelu']
+        - dropout_rate : float entre 0. et 0.5 , a noter que la première couche voit son dropout divisé par 2.5, soit entre 0 et 0.2
+        - batch_Norm : boolean, active une normalisation par batch à chque bloc
+        
+    Returns
+    -------
+        - model : le réseau avec un bloc CNN supplémentaire
+    
+    """
+    if(activation == 'selu'):
+        model.add(Conv2D(feature_maps, kernel_size=(Kernel_size, Kernel_size),
+                         activation=activation, 
+                         kernel_initializer='lecun_normal'))
+        model.add(Conv2D(feature_maps, (Kernel_size, Kernel_size), activation=activation, 
+                         kernel_initializer='lecun_normal'))
+        if batch_Norm :
+            model.add(BatchNormalization())
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        if float(dropout_rate) != 0. :
+            model.add(AlphaDropout(dropout_rate))
+        
+    else : 
+        model.add(Conv2D(feature_maps, kernel_size=(Kernel_size, Kernel_size),
+                         activation=activation))
+        model.add(Conv2D(feature_maps, (Kernel_size, Kernel_size), activation=activation))
+        if batch_Norm :
+            model.add(BatchNormalization())
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        if float(dropout_rate) != 0. :
+            model.add(Dropout(dropout_rate))
+    return model
+
+
+def build_cnn(entree,
+              sortie,
+              optimizer = "Adam",
+              Learning_rate_custom = None,
+              nombre_de_blocs = 2,
+              feature_maps = 32,
+              Kernel_size = 3,
+              activation = "relu",
+              dropout_rate = .5,
+              batch_Norm = True,
+              couche_entierement_connectee = 64
+              ):
+    
     """
     Crée un réseau de type CNN pour la labellisation
 
     Parameters
     ----------
-        - INPUT : la taille des images à utiliser et le nombre de channels couleur (1 pour les DICOM)
-        - sortie : int, le nombre de class voulues en sortie, correspond au nombre de sous dossiers si vous utilisez keras.
-        - original : nombre de feature map à utiliser au déaprt (allourdit le réseau)
+        - entree : tuple, la taille des images à utiliser et le nombre de channels couleur (1 pour les DICOM)
+        - sortie : int, le nombre de classes voulues en sortie, correspond au nombre de sous dossiers si vous utilisez keras.
+        - optimizer : string, nom de l'optimizer selon Tensorflow, exemples : 'Adam','Adamax','Nadam','RMSprop','SGD'
+        - Learning_rate_custom = None, modifie le learning rate, disponible uniquement pour les 
+        optimizer suivants : parmi ['Adam','Adamax','Nadam','RMSprop','SGD'], si 'None' prend le learning rate par défaut défini 
+        dans le code de Tensorflow
+        - nombre_de_blocs : int, entre 1 et infini, nous conseillons des valeurs entre 1 et 4.
+        - feature_maps : int, nombre de feature map à utiliser au départ (allourdit le réseau)
+        - Kernel_size : int, taille d'un côté du kernl size des couches convolutives. nous conseillons 3, 5 ou 7.
+        - activation : fonction d'activation parmi ['sigmoid', 'relu', 'elu', 'leaky-relu', 'selu', 'gelu']
+        - dropout_rate : float entre 0. et 0.5 , a noter que la première couche voit son dropout divisé par 2.5, soit entre 0 et 0.2
+        - batch_Norm : boolean, active une normalisation par batch à chque bloc
+        - couche_entierement_connectee : int, nombre de neurones de la couche Dense finale
+        
         
     Returns
     -------
         - model : le réseau prêt à l'entrainement
     
-    Notes
-    -----
-    Ne pas hésiter à modifier les hyperparamètres :
-    - le learning rate
-    - l'optimizer
-    
     """
-    model = tf.keras.Sequential([
-        Conv2D(original, 3, activation='relu', input_shape=INPUT), Activation('relu'),
-        Conv2D(original, (3, 3)), Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.5),
-
-        Conv2D(original *2, (3, 3), padding='same'), Activation('relu'),
-        Conv2D(original *2, (3, 3)), Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.5),
-
-        Conv2D(original *4, (3, 3), padding='same'), Activation('relu'),
-        Conv2D(original *4, (3, 3)), Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.5),
-
-        Flatten(),
-        Dense(256), Activation('relu'),
-        Dropout(0.5),
-        Dense(sortie, activation='softmax')
-    ])
-    model.compile(optimizer = RMSprop(lr=0.0001),
-                  loss      = "categorical_crossentropy", 
-                  metrics   = ["accuracy"])
-    return model
-
-def myCNN2 (INPUT, 
-           sortie=10, #Le nombre de catégories prévues
-           original = 64 #Le nombre de features maps utilisé au départ
-          ):
-    """
-    Crée un réseau de type CNN pour la labellisation
-
-    Parameters
-    ----------
-        - INPUT : la taille des images à utiliser et le nombre de channels couleur (1 pour les DICOM)
-        - sortie : int, le nombre de class voulues en sortie, correspond au nombre de sous dossiers si vous utilisez keras.
-        - original : nombre de feature map à utiliser au déaprt (allourdit le réseau)
-        
-    Returns
-    -------
-        - model : le réseau prêt à l'entrainement
+    #Réglage de la fonction d'activation, car tensorflow ne les permet pas toutes automatiquement :
+    if activation == "leaky-relu":
+        activation = Activation(LeakyReLU(alpha=0.2))
+    elif activation == "gelu": #d'après https://arxiv.org/pdf/1606.08415.pdf
+        def gelu(x):
+            return 0.5 * x * (1 + tf.tanh(tf.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3))))
+        activation =  Activation(gelu)
     
-    Notes
-    -----
-    Ne pas hésiter à modifier les hyperparamètres :
-    - le learning rate
-    - l'optimizer
+    #Réglage de l'optimizer :
+    #Remarque : tous les autres optimizers prévus par Tensorflow sont possqibles mais la fonction ne permet pas 
+    #de modifier leur learning rate
+    if Learning_rate_custom != None :
+        if optimizer == "Adam" :
+            optimizer = Adam(learning_rate=Learning_rate_custom)
+        elif optimizer == "Adamax" :
+            optimizer = Adamax(learning_rate=Learning_rate_custom)
+        elif optimizer == "Nadam" :
+            optimizer = Nadam(learning_rate=Learning_rate_custom)
+        elif optimizer == "RMSprop" :
+            optimizer = RMSprop(learning_rate=Learning_rate_custom, rho=0.9, momentum=0.0)
+        elif optimizer == "SGD" :
+            optimizer = SGD(learning_rate=Learning_rate_custom, momentum=0.0, nesterov=False)
+
     
-    """
-    model = tf.keras.Sequential([
-        Conv2D(original, 3, input_shape=INPUT, activation=LeakyReLU(alpha=0.3)),
-        Conv2D(original, (3, 3), activation=LeakyReLU(alpha=0.3)),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.5),
-
-        Conv2D(original *2, (3, 3), padding='same', activation=LeakyReLU(alpha=0.3)),
-        Conv2D(original *2, (3, 3), activation=LeakyReLU(alpha=0.3)),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.5),
-
-        Conv2D(original *4, (3, 3), padding='same', activation=keras.layers.LeakyReLU(alpha=0.3)),
-        Conv2D(original *4, (3, 3), activation=LeakyReLU(alpha=0.3)),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.5),
-
-        Flatten(),
-        Dense(256, activation=LeakyReLU(alpha=0.3)),
-        Dropout(0.5),
-        Dense(64, activation=LeakyReLU(alpha=0.3)),
-        Dropout(0.5),
-        Dense(sortie, activation='softmax')
-    ])
-    model.compile(optimizer = RMSprop(lr=0.0001),
-                  loss      = "categorical_crossentropy", 
-                  metrics   = ["accuracy"])
-    return model
-
-
-def mySNN (INPUT,sortie=10):
-    """
-    Crée un réseau de type CNN pour la labellisation, ce type de réseau particulier réalise une normalisation autour de zero, 
-    ce type de réseau porte le nom de Self Normalizing Networks (SNN)
-
-    Parameters
-    ----------
-        - INPUT : tuple, la taille des images à utiliser et le nombre de channels couleur (1 pour les DICOM)
-        - sortie : int, le nombre de class voulues en sortie, correspond au nombre de sous dossiers si vous utilisez keras.
-
-    Returns
-    -------
-        - model : le réseau prêt à l'entrainement
+    #Correction des erreurs de réglages :
+    if dropout_rate >0.5 :
+        dropout_rate = .5
     
-    Notes
-    -----
-    Ne pas hésiter à modifier les hyperparamètres :
-    - le learning rate
-    - l'optimizer
-    
-    """
-    inputs = keras.Input(shape=INPUT, dtype='float32', name='images')
-
     model = Sequential()
-    model.add(Conv2D(32, (3, 3), padding='same',
-                     input_shape=INPUT,kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(Conv2D(64, (3, 3),kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(AlphaDropout(0.2))
-
-    model.add(Conv2D(64, (3, 3), padding='same',kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(Conv2D(64, (3, 3),kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(AlphaDropout(0.1))
-
     
-    model.add(Conv2D(64, (3, 3), padding='same',kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(Conv2D(64, (3, 3),kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(AlphaDropout(0.1))
-    
-    model.add(Conv2D(64, (3, 3), padding='same',kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(Conv2D(64, (3, 3),kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(AlphaDropout(0.1))
-    
-    model.add(Flatten())
-    model.add(Dense(256,kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('selu'))
-    model.add(AlphaDropout(0.2))
-    model.add(Dense(sortie,kernel_initializer='lecun_normal',bias_initializer='zeros'))
-    model.add(Activation('softmax'))
+    if(activation == 'selu'):
+        #1er bloc :
+        model.add(Conv2D(feature_maps, kernel_size=(Kernel_size,Kernel_size), activation=activation, input_shape=entree,
+                         kernel_initializer='lecun_normal'))
+        model.add(Conv2D(feature_maps, (Kernel_size, Kernel_size), activation=activation, 
+                         kernel_initializer='lecun_normal'))
+        if batch_Norm :
+            model.add(BatchNormalization())
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(AlphaDropout(dropout_rate/2.5))
+        
+        
+        #Creation des blocs suivants :
+        NumeroBloc = 1
+        while NumeroBloc < nombre_de_blocs :
+            feature_maps *= 2
+            model = Create_block(model = model, feature_maps = feature_maps, Kernel_size = Kernel_size,
+                                 activation = activation, dropout_rate =dropout_rate, batch_Norm = batch_Norm )
+            NumeroBloc +=1
+        
+        #Couches de sortie
+        model.add(Flatten())
+        model.add(Dense(couche_entierement_connectee, activation=activation, kernel_initializer='lecun_normal'))
+        model.add(AlphaDropout(dropout_rate))
+        model.add(Dense(sortie, activation='softmax'))
+        
+        
+    else:
+        #1er bloc :
+        model.add(Conv2D(feature_maps, kernel_size=(Kernel_size,Kernel_size), activation=activation, input_shape=entree))
+        model.add(Conv2D(feature_maps, kernel_size=(Kernel_size,Kernel_size), activation=activation))
+        if batch_Norm :
+            model.add(BatchNormalization())
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        if float(dropout_rate) != 0. :
+            model.add(Dropout(dropout_rate/2.5))
+        
+        #Creation des blocs suivants :
+        NumeroBloc = 1
+        while NumeroBloc < nombre_de_blocs :
+            feature_maps *= 2
+            model = Create_block(model = model, feature_maps = feature_maps, Kernel_size = Kernel_size,
+                                     activation = activation, dropout_rate =dropout_rate, batch_Norm = batch_Norm )
+            NumeroBloc +=1
 
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=RMSprop(lr=0.0001, decay=1e-6),
-                  metrics=['accuracy'])
-
-    type_output = model(inputs)
+        
+        #Couches de sortie
+        model.add(Flatten())
+        model.add(Dense(couche_entierement_connectee, activation=activation))
+        if float(dropout_rate) != 0. :
+            model.add(Dropout(dropout_rate))
+        model.add(Dense(sortie, activation='softmax'))
+    
+    model.compile(
+        loss='binary_crossentropy', 
+        optimizer=optimizer, 
+        metrics=['accuracy']
+    )
+    print(model.summary())
     return model
 
 
