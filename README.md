@@ -163,16 +163,62 @@ model = build_cnn (entree =  (HauteurImage,LargeurImage,1), sortie =6)
 ```
 
 Dans sa version la plus simple cette fonction ne demande quasiment aucun réglage, nous permettons en revanche de modifier la totalité de ses réglages : 
-- **l’optimizer : ** il s’agit de la formule qui détermine comment le réseau doit adapter ses réglages internes. Il existe plusieurs façon de déterminer comment les poids des neurones doivent être corrigés: Certains optimizers possèdent une inertie.
-- **le learning rate : correspond à la taille du pas de modification. C’est un paramètre majeur, il est dépendant de l’optimizer choisi.
-- **le Nombre de blocs de convolution : dans sa version de base un réseau de type CNN correspond à une à deux couche(s) de neurones de convolution et d’une couche de maxpooling (qui peut être interprété comme un Maximal Intesity Projection (MIP) sur plusieurs pixels adjacents). Il est possible de répéter les blocs de convolution dont le nombre correspond à ce réglage.
-- **Nombre de feature maps : Il s’agit du nombre de filtres d’image utilisés pour interpréter l’image. Ce nombre est multiplié automatiquement par deux à chaque bloc de convolution.
-- **Kernel size : correspond à la largeur des filtres utilisés. Un filtre trop large perd le détail de l’image alors qu’un filtre trop petit ne s’intéresse qu’aux détails en oubliant l’information globale. En général ces filtres font entre 3 et 7 pixels de côté.
-- **Fonction d’activation : cette fonction indique comment est interprétée l’activation des différents neurones d’une couche avant le passage à la couche suivante. Il existe de multiples fonctions d’activation décrites dans la littérature [64] parmi lesquelles nous conseillons “selu” [65] et "leaky-relu" [66]. La fonction “relu” étant souvent utilisée dans la littérature, nous avons choisi celle-ci comme réglage par défaut.
-- **Dropout : Le dropout est une méthode de régularisation. Pendant l’entraînement, un certain nombre de résultats sont ignorés de manière aléatoire selon une certaine probabilité. Cela a pour effet de limiter l’overfitting. A chaque epoch les neurones ignorés sont de nouveau tirés au hasard. Nous conseillons un dropout maximal de 0,5 en fin de réseau [67] et 0,2 en début de réseau. En effet au-delà de 0,5 de probabilité le dropout diminue les capacités d’apprentissage du réseau sans augmenter son effet sur l’overfitting [68].
-- **Normalisation par batch : la normalisation par batch permet d'accélérer l'entraînement du réseau. Son mécanisme est en revanche débattu [69]. Son usage peut cependant s’avérer péjoratif sur les batchs de petite taille [70] et à éviter avec l’usage du dropout.
-- **Couche entièrement connectée : elle correspond à la taille de l’avant-dernière couche de neurones, s’occupant d’agréger les résultats des couches précédentes.
+- **l’optimizer** :  il s’agit de la formule qui détermine comment le réseau doit adapter ses réglages internes. Il existe plusieurs façon de déterminer comment les poids des neurones doivent être corrigés: Certains optimizers possèdent une inertie.
+- **le learning rate** : correspond à la taille du pas de modification. C’est un paramètre majeur, il est dépendant de l’optimizer choisi.
+- **le Nombre de blocs de convolution** : dans sa version de base un réseau de type CNN correspond à une à deux couche(s) de neurones de convolution et d’une couche de maxpooling (qui peut être interprété comme un Maximal Intesity Projection (MIP) sur plusieurs pixels adjacents). Il est possible de répéter les blocs de convolution dont le nombre correspond à ce réglage.
+- **Nombre de feature maps** : Il s’agit du nombre de filtres d’image utilisés pour interpréter l’image. Ce nombre est multiplié automatiquement par deux à chaque bloc de convolution.
+- **Kernel size** : correspond à la largeur des filtres utilisés. Un filtre trop large perd le détail de l’image alors qu’un filtre trop petit ne s’intéresse qu’aux détails en oubliant l’information globale. En général ces filtres font entre 3 et 7 pixels de côté.
+- **Fonction d’activation** : cette fonction indique comment est interprétée l’activation des différents neurones d’une couche avant le passage à la couche suivante. Il existe de multiples fonctions d’activation décrites dans la littérature parmi lesquelles nous conseillons “selu” et "leaky-relu". La fonction “relu” étant souvent utilisée dans la littérature, nous avons choisi celle-ci comme réglage par défaut.
+- **Dropout** : Le dropout est une méthode de régularisation. Pendant l’entraînement, un certain nombre de résultats sont ignorés de manière aléatoire selon une certaine probabilité. Cela a pour effet de limiter l’overfitting. A chaque epoch les neurones ignorés sont de nouveau tirés au hasard. Nous conseillons un dropout maximal de 0,5 en fin de réseau et 0,2 en début de réseau. En effet au-delà de 0,5 de probabilité le dropout diminue les capacités d’apprentissage du réseau sans augmenter son effet sur l’overfitting.
+- **Normalisation par batch** : la normalisation par batch permet d'accélérer l'entraînement du réseau. Son mécanisme est en revanche débattu. Son usage peut cependant s’avérer péjoratif sur les batchs de petite taille et à éviter avec l’usage du dropout.
+- **Couche entièrement connectée** : elle correspond à la taille de l’avant-dernière couche de neurones, s’occupant d’agréger les résultats des couches précédentes.
 
 
+Les réglages suivants correspondent aux réglages par défaut de la fonction :
+```
+model =  build_cnn(entree = <image>,
+                                sortie = <nombre de catégories>,
+                                optimizer = "adam",
+                                Learning_rate_custom = None,
+                                nombre_de_blocs = 2,
+                                feature_maps = 32,
+                                Kernel_size = 3,
+                                activation = "relu",
+                                dropout_rate = .5,
+                                batch_Norm = False,
+                                couche_entierement_connectée = 64)
+```
+
+
+
+### Création d'un réseau de convolution par Transfer Learning :
+Si Keras permet de télécharger facilement ces réseaux, il faut tout de même quelques lignes de code pour les adapter, nous avons regroupé tout ceci pour le tutoriel dans une fonction.
+
+```
+TransferLearning(entree = <image>, 
+                            sortie = <nombre de catégories>,
+                            training_generator = <training_generator>, 
+                            validation_generator = <validation_generator>,
+                            nombre_epochs_avant_finetuning = <EPOCHS_BEFORE>,
+                            nombre_epochs_apres_finetuning = <EPOCHS_AFTER>,
+                            Model_dOrigine       = "InceptionV3" )
+```
+
+Parmi les paramètres disponibles, nous permettons les réglages suivants :
+- **Model_dOrigine** : correspond au choix du réseau à utiliser pour le transfer learning, parmi : "Xception", "InceptionV3", "ResNet50", "VGG16", "VGG19", "MobileNetV2"
+- **optimizer** : correspond aux optimizer à utiliser, en distinguant avant et après transfer learning.
+- **Learning_rate_custom** = correspond au pas d’apprentissage à utiliser, en distinguant avant et après transfer learning.
+- **class_weight** : permet d’ajouter une pondération aux classes selon leur prévalence dans le jeu de données.
+
+
+
+
+
+### Création d'un réseau U-net :
+Nous fournissons une fonction également pour créer un “model” U-net en une seule ligne :
+
+```
+model = U_Net (entree = (HauteurImage,LargeurImage,1))
+```
 
 
