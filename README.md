@@ -4,6 +4,7 @@ Vous pourrez télécharger sur cette page le code pour simplifier la mise à l#�
 Après avoir configuré votre environnement, soit via les commandes suivantes, soit via le fichier reequirements.txt, vous pourrez téléchagrcer les fichiers python et jupyter-notebook pour faire vos propres essais sur votre machine.
 
 ### Pour l'installation de l'environnement
+
 Commençons par installer python et conda : ceci se fait en une seule action en choisissant la version sur le site d’Anaconda : https://www.anaconda.com/distribution/ .
 Tensorflow nécessite une version de python en version 3.7 au maximum (alors que celui-ci possède déjà une version 3.8).
 
@@ -17,32 +18,36 @@ Une fois Anaconda installé, il faut ouvrir “l’invite de commandes” :
 
 
 **- via le fichier d'installation :**
+
 Une fois conda installé, il faut ouvrir une invite de commande anaconda et rentrer :
-> conda env create -f environment.yml
+'''conda env create -f environment.yml'''
 
 Ceci créera un environnement nommé “TutorielIA”. Assurez vous que le fichier environment.yml
 se situe au même endroit que là où vous lancez cette commande. Sinon vous pouvez donner son chemin, exemple : 
 
-> conda env create -f “C:\\Exemple\de\Chemin\environment.yml”
+'''conda env create -f “C:\\Exemple\de\Chemin\environment.yml”'''
 
 Pour activer l'environnement par la suite, tapez :
 
-> conda activate TutorielIA
+'''conda activate TutorielIA'''
 
 
 
 **- via lignes de commandes :**
- L’installation peut se faire via pip ou via conda (deux logiciels existants qui servent aux installations). Ce dernier a l’avantage d’une installation plus simple concernant l’usage des GPU. Cependant il existe un délai entre l’apparition d’une mise à jour d’une librairie -tensorflow par exemple- et sa disponibilité sur conda. Si la version de tensorflow peut souffrir d’un léger retard sur conda ceci ne posera pas de problème pour notre usage : TensorFlow2.1 y a été ajouté en février 2020.
- Si vous voulez garder la main sur le détail de l’installation, vous pouvez taper les lignes de commandes suivantes, ligne par ligne pour obtenir le même résultat et sans utiliser le fichier d’installation que nous fournissons. 
 
-> conda create --name <env>  python=3.7.6
-> conda install keras-gpu
-> conda install -c conda-forge pydicom
-> conda install scikit-image
-> conda install -c conda-forge opencv
-> conda install pandas
-> conda install openpyxl
-> conda install jupyterlab
+Si vous voulez garder la main sur le détail de l’installation, vous pouvez taper les lignes de commandes suivantes, ligne par ligne pour obtenir le même résultat et sans utiliser le fichier d’installation que nous fournissons. 
+
+L’installation peut se faire via pip ou via conda (deux logiciels existants qui servent aux installations). Ce dernier a l’avantage d’une installation plus simple concernant l’usage des GPU. Cependant il existe un délai entre l’apparition d’une mise à jour d’une librairie -tensorflow par exemple- et sa disponibilité sur conda. Si la version de tensorflow peut souffrir d’un léger retard sur conda ceci ne posera pas de problème pour notre usage : TensorFlow2.1 y a été ajouté en février 2020.
+ 
+
+'''conda create --name <env>  python=3.7.6
+conda install keras-gpu
+conda install -c conda-forge pydicom
+conda install scikit-image
+conda install -c conda-forge opencv
+conda install pandas
+conda install openpyxl
+conda install jupyterlab'''
 
 
 Ceci installera toutes les API qui nous semblent nécessaires :
@@ -54,6 +59,8 @@ jupyterlab correspond à l’interface visuelle de Jupyter Notebook que nous con
 
 Voici une liste d’API non exhaustive que nous recommandons pour aller plus loin :
 SimpleITK, pytables, nibabel, nipype  seront utiles en cas de passage à un 3D U-Net ou pour lire plusieurs bases de données dont les fichiers sont au format nifti. Scikit-learn est une librairie puissante pour réaliser des statistiques. Cupy permet d'accélérer les calculs en transférant les calculs lourds sur les cartes graphiques.
+
+
 
 
 
