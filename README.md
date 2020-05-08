@@ -22,22 +22,22 @@ Une fois Anaconda installé, il faut ouvrir “l’invite de commandes” :
 
 Une fois conda installé, il faut ouvrir une invite de commande anaconda et rentrer :
 
-'''
+```
 conda env create -f environment.yml
-'''
+```
 
 Ceci créera un environnement nommé “TutorielIA”. Assurez vous que le fichier environment.yml
 se situe au même endroit que là où vous lancez cette commande. Sinon vous pouvez donner son chemin, exemple : 
 
-'''
+```
 conda env create -f “C:\\Exemple\de\Chemin\environment.yml”
-'''
+```
 
 Pour activer l'environnement par la suite, tapez :
 
-'''
+```
 conda activate TutorielIA
-'''
+```
 
 
 
@@ -48,7 +48,7 @@ Si vous voulez garder la main sur le détail de l’installation, vous pouvez ta
 L’installation peut se faire via pip ou via conda (deux logiciels existants qui servent aux installations). Ce dernier a l’avantage d’une installation plus simple concernant l’usage des GPU. Cependant il existe un délai entre l’apparition d’une mise à jour d’une librairie -tensorflow par exemple- et sa disponibilité sur conda. Si la version de tensorflow peut souffrir d’un léger retard sur conda ceci ne posera pas de problème pour notre usage : TensorFlow2.1 y a été ajouté en février 2020.
  
 
-'''
+```
 conda create --name <env>  python=3.7.6
 conda install keras-gpu
 conda install -c conda-forge pydicom
@@ -57,7 +57,7 @@ conda install -c conda-forge opencv
 conda install pandas
 conda install openpyxl
 conda install jupyterlab
- '''
+```
 
 
 Ceci installera toutes les API qui nous semblent nécessaires :
@@ -77,9 +77,9 @@ SimpleITK, pytables, nibabel, nipype  seront utiles en cas de passage à un 3D U
 ### Usage
 Par la suite, pour ouvrir jupyter notebook il suffit de taper la commande suivante dans l’invite de commande :
 
-'''
+```
 jupyter notebook
-'''
+```
 
 Le logiciel s’ouvre dans le navigateur internet (sans nécessiter une connexion internet). Nous pouvons créer un “notebook” en Python 3 en cliquant sur ‘New’.
 ![image New notebook](https://github.com/oerton42/Tutoriel_DeepLearning_Radiologie/blob/master/Annotation%202020-05-08%20095904572.png?raw=true)
@@ -104,7 +104,7 @@ Dans chaque dossier de dataset, nous créons un sous-dossier de catégorie :
 dans le cas d’un réseau de labellisation cela correspond aux différents labels recherchés pour définir nos images ; 
 
 Exemple dans le cas d’une labellisation en 3 classes :
-'''
+```
 D:\User\Dataset\Train\
                        …\Train\Class1\
                        …\Train\Class1\image1.png
@@ -125,7 +125,7 @@ D:\User\Dataset\Test\
                        …\Test\Class3\
                        …\Test\Class3\image11.png
                        …\Test\Class3\image12.png
-'''
+```
 
 Il est possible de créer autant de classes que voulues, cependant une image ne peut être que dans un seul dossier à la fois et donc n’appartenir qu’à une seule classe. Ainsi cette technique d’import ne prend pas en charge la possibilité d’associer plusieurs labels à une même image : nous parlons de labellisation “multi-class single-label”. D’autres techniques permettent de trier les fichiers afin d’obtenir une labellisation “multi-class multi-label”.
 
@@ -133,7 +133,7 @@ Il est possible de créer autant de classes que voulues, cependant une image ne 
 
 Dans le cas d’un réseau de segmentation cela correspond à un sous-dossier “images à segmenter” et un sous-dossier “résultats”.
 
-'''
+```
 D:\User\Dataset\Train\
                        …\Train\Images\
                        …\Train\Images\image1.png
@@ -148,5 +148,31 @@ D:\User\Dataset\Test\
                        …\Test\SegmentationMap\
                        …\Test\Segmentation\image7.png
                        …\Test\Segmentation\image8.png
-'''
+```
+
+
+
+### Création d'un réseau de convolution :
+
+Les réseaux neuronaux convolutifs mettent en œuvre des couches de neurones convolutifs décomposant l’image par fragments où chaque neurone est responsable d’une partie puis connecté à d’autres, décomposant les caractéristiques de l'image en une multitude de motifs différents (feature maps). Cette composition peut être répétée plusieurs fois de façon séquentielle au sein de l’architecture.
+
+
+Nous proposons une fonction permettant de créer un tel réseau que l’on nommera “model”; il permet de labelliser des images (de hauteur HauteurImage” et largeur “LargeurImage” codées sur une échelle de gris “1”) selon 6 catégories :
+```
+model = build_cnn (entree =  (HauteurImage,LargeurImage,1), sortie =6)
+```
+
+Dans sa version la plus simple cette fonction ne demande quasiment aucun réglage, nous permettons en revanche de modifier la totalité de ses réglages : 
+- **l’optimizer : ** il s’agit de la formule qui détermine comment le réseau doit adapter ses réglages internes. Il existe plusieurs façon de déterminer comment les poids des neurones doivent être corrigés: Certains optimizers possèdent une inertie.
+- **le learning rate : correspond à la taille du pas de modification. C’est un paramètre majeur, il est dépendant de l’optimizer choisi.
+- **le Nombre de blocs de convolution : dans sa version de base un réseau de type CNN correspond à une à deux couche(s) de neurones de convolution et d’une couche de maxpooling (qui peut être interprété comme un Maximal Intesity Projection (MIP) sur plusieurs pixels adjacents). Il est possible de répéter les blocs de convolution dont le nombre correspond à ce réglage.
+- **Nombre de feature maps : Il s’agit du nombre de filtres d’image utilisés pour interpréter l’image. Ce nombre est multiplié automatiquement par deux à chaque bloc de convolution.
+- **Kernel size : correspond à la largeur des filtres utilisés. Un filtre trop large perd le détail de l’image alors qu’un filtre trop petit ne s’intéresse qu’aux détails en oubliant l’information globale. En général ces filtres font entre 3 et 7 pixels de côté.
+- **Fonction d’activation : cette fonction indique comment est interprétée l’activation des différents neurones d’une couche avant le passage à la couche suivante. Il existe de multiples fonctions d’activation décrites dans la littérature [64] parmi lesquelles nous conseillons “selu” [65] et "leaky-relu" [66]. La fonction “relu” étant souvent utilisée dans la littérature, nous avons choisi celle-ci comme réglage par défaut.
+- **Dropout : Le dropout est une méthode de régularisation. Pendant l’entraînement, un certain nombre de résultats sont ignorés de manière aléatoire selon une certaine probabilité. Cela a pour effet de limiter l’overfitting. A chaque epoch les neurones ignorés sont de nouveau tirés au hasard. Nous conseillons un dropout maximal de 0,5 en fin de réseau [67] et 0,2 en début de réseau. En effet au-delà de 0,5 de probabilité le dropout diminue les capacités d’apprentissage du réseau sans augmenter son effet sur l’overfitting [68].
+- **Normalisation par batch : la normalisation par batch permet d'accélérer l'entraînement du réseau. Son mécanisme est en revanche débattu [69]. Son usage peut cependant s’avérer péjoratif sur les batchs de petite taille [70] et à éviter avec l’usage du dropout.
+- **Couche entièrement connectée : elle correspond à la taille de l’avant-dernière couche de neurones, s’occupant d’agréger les résultats des couches précédentes.
+
+
+
 
