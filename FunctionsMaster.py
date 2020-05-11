@@ -431,7 +431,7 @@ def Create_block(model,
                  Kernel_size = 5,
                  activation = "relu",
                  dropout_rate = .5,
-                 batch_Norm = True
+                 batch_Norm = False
                 ):
     """
     Ajoute un bloc CNN, inutile seule : A utiliser dans la fonction buildCNN
@@ -483,7 +483,7 @@ def build_cnn(entree,
               Kernel_size = 3,
               activation = "relu",
               dropout_rate = .5,
-              batch_Norm = True,
+              batch_Norm = False,
               couche_entierement_connectee = 64
               ):
     
@@ -566,8 +566,11 @@ def build_cnn(entree,
         model.add(Flatten())
         model.add(Dense(couche_entierement_connectee, activation=activation, kernel_initializer='lecun_normal'))
         model.add(AlphaDropout(dropout_rate))
+        """if sortie ==2:        
+            model.add(Dense(1, activation='sigmoid'))
+        else : 
+            model.add(Dense(sortie, activation='softmax'))"""
         model.add(Dense(sortie, activation='softmax'))
-        
         
     else:
         #1er bloc :
@@ -593,15 +596,272 @@ def build_cnn(entree,
         model.add(Dense(couche_entierement_connectee, activation=activation))
         if float(dropout_rate) != 0. :
             model.add(Dropout(dropout_rate))
+        """if sortie ==2:        
+            model.add(Dense(1, activation='sigmoid'))
+        else : 
+            model.add(Dense(sortie, activation='softmax'))"""
         model.add(Dense(sortie, activation='softmax'))
     
+    """if sortie ==2:        
+        model.compile(
+            loss='binary_crossentropy', 
+            optimizer=optimizer, 
+            metrics=['accuracy']
+        )
+    else : 
+        model.compile(
+            loss='categorical_crossentropy', 
+            optimizer=optimizer, 
+            metrics=['accuracy']
+        )"""
     model.compile(
-        loss='binary_crossentropy', 
-        optimizer=optimizer, 
-        metrics=['accuracy']
-    )
+            loss='categorical_crossentropy', 
+            optimizer=optimizer, 
+            metrics=['accuracy'])
     print(model.summary())
     return model
+
+
+def TransferLearning(entree,
+                     sortie,
+                     training_generator, 
+                     validation_generator,
+                     nombre_epochs_avant_finetuning,
+                     nombre_epochs_apres_finetuning,
+                     Model_dOrigine       = "Xception", #
+                     optimizer            = ["Adam","RMSprop"],
+                     Learning_rate_custom = [None,None],
+                     class_weight         = None
+                    ):
+        
+    """
+    Crée un réseau de type CNN pour la labellisation
+
+    Parameters
+    ----------
+        - entree : tuple, la taille des images à utiliser et le nombre de channels couleur (3 obligatoires !)
+        a noter que si la taille est laissée libre, ces réseaux ont été entrainés sur des images d'une définition prédéfinie et 
+        fonctionneront mieux sur des images de taille proche :
+            VGG16 et VGG19 : 224*224
+            Xception : 299*299
+        - sortie : int, le nombre de classes voulues en sortie, correspond au nombre de sous dossiers si vous utilisez keras.
+        - training_generator : generator keras, correspondant au training
+        - validation_generator : generator keras, correspondant à la validation
+        - nombre_epochs_avant_finetuning : int, 2 à 8 epochs suffiront probablement
+        - nombre_epochs_apres_finetuning : int, nombre après finetuning
+        - Model_dOrigine : parmi : "Xception", "InceptionV3", "ResNet50", "VGG16", "VGG19", "MobileNetV2"
+        - optimizer : liste de 2x string, nom de l'optimizer pour avant et après fine-tuning. Selon Tensorflow, exemples : 
+        'Adam','Adamax','Nadam','RMSprop','SGD'
+        - Learning_rate_custom = liste de 2x string ou 'None', modifie le learning rate pour avant et après fine-tuning, disponible 
+        uniquement pour les  optimizer suivants : parmi ['Adam','Adamax','Nadam','RMSprop','SGD'],  'None' prend le learning rate par 
+        défaut défini dans le code de Tensorflow
+        - class_weight : dict, pondérations à appliquer sur les classes.
+        
+    Returns
+    -------
+        - model : le réseau prêt, après entrainement
+        - hist1 : history avant fine tuning
+        - hist2 : history après fine tuning
+    
+    """
+    # Pre-trained model
+    if Model_dOrigine == "Xception" :
+        base_model = tf.keras.applications.Xception(input_shape=entree,include_top=False, pooling='avg',weights='imagenet')
+        base_model.trainable = False
+        model = tf.keras.Sequential([
+            base_model,
+            Dense(256, activation="relu"),
+            Dropout(0.5)
+            #Dense(sortie, activation='softmax')
+        ])
+        
+    elif Model_dOrigine == "InceptionV3" :
+        base_model = tf.keras.applications.InceptionV3(input_shape=entree,include_top=False,weights='imagenet')
+        base_model.trainable = False
+        model = tf.keras.Sequential([
+            base_model,
+            GlobalAveragePooling2D(),
+            Dense(256, activation="relu"),
+            Dropout(0.5)
+            #Dense(sortie, activation='softmax')
+        ])
+            
+    elif Model_dOrigine == "ResNet50" :
+        base_model = tf.keras.applications.ResNet50(input_shape=entree,include_top=False,weights='imagenet')
+        base_model.trainable = False
+        model = tf.keras.Sequential([
+            base_model,
+            AveragePooling2D(pool_size=(7,7)),
+            Flatten(),
+            Dense(256, activation="relu"),
+            Dropout(0.5)
+            #Dense(sortie, activation='softmax')
+        ])
+        
+    elif Model_dOrigine == "VGG16" :
+        base_model = tf.keras.applications.VGG16(input_shape=entree,include_top=False,weights='imagenet')
+        base_model.trainable = False
+        model = tf.keras.Sequential([
+            base_model,
+            MaxPooling2D(pool_size=(2, 2)),
+            Flatten(),
+            Dense(256, activation="relu"),
+            Dropout(0.5)
+            #Dense(sortie, activation='softmax')
+        ])
+        
+    elif Model_dOrigine == "VGG19" :
+        base_model = tf.keras.applications.VGG16(input_shape=entree,include_top=False,weights='imagenet')
+        base_model.trainable = False
+        model = tf.keras.Sequential([
+            base_model,
+            MaxPooling2D(pool_size=(2, 2)),
+            Flatten(),
+            Dense(256, activation="relu"),
+            Dropout(0.5)
+            #Dense(sortie, activation='softmax')
+        ])
+
+    elif Model_dOrigine == "MobileNetV2" :
+        base_model = tf.keras.applications.MobileNetV2(input_shape=entree,include_top=False,weights='imagenet')
+        base_model.trainable = False
+        model = tf.keras.Sequential([
+            base_model,
+            Flatten(),
+            Dense(256, activation="relu"),
+            Dropout(0.5)
+            #Dense(sortie, activation='softmax')
+        ])
+    else :
+        raise ValueError
+        
+        
+        
+    """if sortie ==2:        
+        model.add(Dense(1, activation='sigmoid'))
+    else : 
+        model.add(Dense(sortie, activation='softmax'))"""
+    model.add(Dense(sortie, activation='softmax'))    
+
+    
+    print(model.summary())
+    
+    """
+    Entrainement avant fine tuning : le réseau utilisé pour le transfer learning n'est pas entrainé durant cette partie.
+    """
+    if nombre_epochs_avant_finetuning == 0 :
+        print("Il n'est pas réalisé d'entrainement avant fine-tuning.")
+    
+    else :
+        #reglage de l'optimizer
+        if Learning_rate_custom[0] != None :
+            if optimizer[0] == "Adam" :
+                optimizer[0] = Adam(learning_rate=Learning_rate_custom[0])
+            elif optimizer[0] == "Adamax" :
+                optimizer[0] = Adamax(learning_rate=Learning_rate_custom[0])
+            elif optimizer[0] == "Nadam" :
+                optimizer[0] = Nadam(learning_rate=Learning_rate_custom[0])
+            elif optimizer[0] == "RMSprop" :
+                optimizer[0] = RMSprop(learning_rate=Learning_rate_custom[0], rho=0.9, momentum=0.0)
+            elif optimizer[0] == "SGD" :
+                optimizer[0] = SGD(learning_rate=Learning_rate_custom[0], momentum=0.0, nesterov=False)
+
+        # Compile
+        """if sortie ==2:        
+            model.compile(
+                loss='binary_crossentropy', 
+                optimizer=optimizer[0], 
+                metrics=['accuracy']
+            )
+        else : 
+            model.compile(
+                loss='categorical_crossentropy', 
+                optimizer=optimizer[0], 
+                metrics=['accuracy']
+            )"""
+        model.compile(
+                loss='categorical_crossentropy', 
+                optimizer=optimizer[0], 
+                metrics=['accuracy'])
+
+        hist1 = model.fit(training_generator,
+                                       steps_per_epoch=training_generator.n//training_generator.batch_size,
+                                       epochs=nombre_epochs_avant_finetuning,
+                                       validation_data=validation_generator,
+                                       validation_steps=validation_generator.n//validation_generator.batch_size,
+                                       class_weight=class_weight)
+
+        training_generator.reset()
+        validation_generator.reset()
+
+
+    """
+    Fine tuning : le réseau utilisé pour le transfer learning est entrainé durant cette partie.
+    """
+    #Nous commencons par defreeze les couches du model :
+    if Model_dOrigine == "Xception" :
+        base_model.trainable = True
+        for layer in base_model.layers[:100]:
+            layer.trainable =  False
+    elif Model_dOrigine == "InceptionV3" :
+        base_model.trainable = True
+    elif Model_dOrigine == "ResNet50" :
+        base_model.trainable = True
+    elif Model_dOrigine == "VGG16" :
+        for layer in base_model.layers[15:]:
+            layer.trainable = True
+    elif Model_dOrigine == "VGG19" :
+        base_model.trainable = True
+        for layer in base_model.layers[:5]:
+            layer.trainable = False
+    elif Model_dOrigine == "MobileNetV2" :
+        base_model.trainable = True
+
+    
+    #reglage de l'optimizer
+    if Learning_rate_custom[1] != None :
+        if optimizer[1] == "Adam" :
+            optimizer[1] = Adam(learning_rate=Learning_rate_custom[1])
+        elif optimizer[1] == "Adamax" :
+            optimizer[1] = Adamax(learning_rate=Learning_rate_custom[1])
+        elif optimizer[1] == "Nadam" :
+            optimizer[1] = Nadam(learning_rate=Learning_rate_custom[1])
+        elif optimizer[1] == "RMSprop" :
+            optimizer[1] = RMSprop(learning_rate=Learning_rate_custom[1], rho=0.9, momentum=0.0)
+        elif optimizer[1] == "SGD" :
+            optimizer[1] = SGD(learning_rate=Learning_rate_custom[1], momentum=0.0, nesterov=False)
+
+    # Recompile
+    """if sortie ==2:        
+        model.compile(
+            loss='binary_crossentropy', 
+            optimizer=optimizer[1], 
+            metrics=['accuracy']
+        )
+    else : 
+        model.compile(
+            loss='categorical_crossentropy', 
+            optimizer=optimizer[1], 
+            metrics=['accuracy']
+        )"""
+    model.compile(
+            loss='categorical_crossentropy', 
+            optimizer=optimizer[1], 
+            metrics=['accuracy'])
+    
+
+    # Entrainement
+    hist2 = model.fit(training_generator,
+                                   steps_per_epoch=training_generator.n//training_generator.batch_size,
+                                   epochs=nombre_epochs_apres_finetuning,
+                                   initial_epoch = nombre_epochs_avant_finetuning,
+                                   validation_steps=validation_generator.n//validation_generator.batch_size,
+                                   validation_data=validation_generator,
+                                   class_weight=class_weight)
+    
+    
+    
+    return model, hist1, hist2
 
 
 def ComparaisonResultats(Nombre_a_afficher, model, test_gen, categories, color="gray", colonnes=2, reset=False):
