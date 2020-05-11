@@ -83,7 +83,7 @@ jupyter notebook
 
 Le logiciel s’ouvre dans le navigateur internet (sans nécessiter une connexion internet). Nous pouvons créer un “notebook” en Python 3 en cliquant sur ‘New’.
 ![image New notebook](https://github.com/oerton42/Tutoriel_DeepLearning_Radiologie/blob/master/Annotation%202020-05-08%20095904572.png?raw=true)
-Sinon, ouvrez le fichier Usage.ipynb et suivez le guide.
+Sinon, ouvrez le fichier Tutoriel.ipynb et suivez le guide.
 
 
 
