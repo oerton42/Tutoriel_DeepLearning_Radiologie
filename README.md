@@ -18,32 +18,10 @@ Une fois Anaconda installé, il faut ouvrir “l’invite de commandes” :
 
 
 
-**- via le fichier d'installation :**
-
-Une fois conda installé, il faut ouvrir une invite de commande anaconda et rentrer :
-
-```
-conda env create -f environment.yml
-```
-
-Ceci créera un environnement nommé “TutorielIA”. Assurez vous que le fichier environment.yml
-se situe au même endroit que là où vous lancez cette commande. Sinon vous pouvez donner son chemin, exemple : 
-
-```
-conda env create -f “C:\\Exemple\de\Chemin\environment.yml”
-```
-
-Pour activer l'environnement par la suite, tapez :
-
-```
-conda activate TutorielIA
-```
-
-
 
 **- via lignes de commandes :**
 
-Si vous voulez garder la main sur le détail de l’installation, vous pouvez taper les lignes de commandes suivantes, ligne par ligne pour obtenir le même résultat et sans utiliser le fichier d’installation que nous fournissons. 
+Si vous voulez garder la main sur le détail de l’installation, vous pouvez taper les lignes de commandes suivantes
 
 L’installation peut se faire via pip ou via conda (deux logiciels existants qui servent aux installations). Ce dernier a l’avantage d’une installation plus simple concernant l’usage des GPU. Cependant il existe un délai entre l’apparition d’une mise à jour d’une librairie -tensorflow par exemple- et sa disponibilité sur conda. Si la version de tensorflow peut souffrir d’un léger retard sur conda ceci ne posera pas de problème pour notre usage : TensorFlow2.1 y a été ajouté en février 2020.
  
@@ -71,6 +49,27 @@ Voici une liste d’API non exhaustive que nous recommandons pour aller plus loi
 SimpleITK, pytables, nibabel, nipype  seront utiles en cas de passage à un 3D U-Net ou pour lire plusieurs bases de données dont les fichiers sont au format nifti. Scikit-learn est une librairie puissante pour réaliser des statistiques. Cupy permet d'accélérer les calculs en transférant les calculs lourds sur les cartes graphiques.
 
 
+**- via le fichier d'installation :**
+
+Si vous savez utiliser un fichier d'installation vous pouvez le fichier environment.yml que nous fournissons à la place.
+Une fois conda installé, il faut ouvrir une invite de commande anaconda et rentrer :
+
+```
+conda env create -f environment.yml
+```
+
+Ceci créera un environnement nommé “TutorielIA”. Assurez vous que le fichier environment.yml
+se situe au même endroit que là où vous lancez cette commande. Sinon vous pouvez donner son chemin, exemple : 
+
+```
+conda env create -f “C:\\Exemple\de\Chemin\environment.yml”
+```
+
+Pour activer l'environnement par la suite, tapez :
+
+```
+conda activate TutorielIA
+```
 
 
 
