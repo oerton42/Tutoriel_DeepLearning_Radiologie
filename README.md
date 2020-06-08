@@ -50,7 +50,7 @@ L’installation peut se faire via pip ou via conda (deux logiciels existants qu
 
 ```
 conda create --name <env>  python=3.7.6
-conda install keras-gpu
+conda install -c conda-forge keras-gpu
 conda install -c conda-forge pydicom
 conda install scikit-image
 conda install -c conda-forge opencv
